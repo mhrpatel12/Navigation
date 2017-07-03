@@ -30,8 +30,9 @@
             android:value="@string/google_maps_key" />
 
         <activity
-            android:name=".NavigationActivity"
-            android:label="@string/title_activity_navigation">
+            android:name=".rest.activity.NavigationActivity"
+            android:label="@string/title_activity_navigation"
+            android:theme="@style/Theme.AppCompat.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
