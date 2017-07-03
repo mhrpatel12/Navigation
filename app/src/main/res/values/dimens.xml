@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="margin_place">3dp</dimen>
+    <dimen name="padding_places_layout">5dp</dimen>
+    <dimen name="margin_fb">10dp</dimen>
+</resources>

@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">Navigation</string>
     <string name="title_activity_navigation">Directions</string>
+
+    <string name="title_activity_fullscreen">FullscreenActivity</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
+    <string name="hint_start">Choose starting point</string>
+    <string name="hint_destination">Choose destination</string>
 </resources>
