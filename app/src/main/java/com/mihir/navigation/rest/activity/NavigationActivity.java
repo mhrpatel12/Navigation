@@ -6,6 +6,8 @@ import android.graphics.Color;
 import android.location.Location;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.AppBarLayout;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -35,12 +37,16 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mihir.navigation.R;
+import com.mihir.navigation.rest.lib.BottomSheetBehaviorGoogleMapsLike;
+import com.mihir.navigation.rest.lib.MergedAppBarLayoutBehavior;
 import com.mihir.navigation.rest.model.DirectionResults;
+import com.mihir.navigation.rest.model.Routes;
 import com.mihir.navigation.rest.model.Steps;
 import com.mihir.navigation.rest.rest.ApiClient;
 import com.mihir.navigation.rest.rest.ApiInterface;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import okhttp3.Route;
@@ -76,6 +82,8 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        initializeBottomSheet();
 
         autocompletePlacesStart = (PlaceAutocompleteFragment)
                 getFragmentManager().findFragmentById(R.id.placeStart);
@@ -149,6 +157,22 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                     .addOnConnectionFailedListener(this)
                     .build();
         }
+    }
+
+    private void initializeBottomSheet() {
+        CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.layout_directions);
+        View bottomSheet = coordinatorLayout.findViewById(R.id.bottom_sheet);
+        final BottomSheetBehaviorGoogleMapsLike behavior = BottomSheetBehaviorGoogleMapsLike.from(bottomSheet);
+        behavior.setState(BottomSheetBehaviorGoogleMapsLike.STATE_COLLAPSED);
+        AppBarLayout mergedAppBarLayout = (AppBarLayout) findViewById(R.id.merged_appbarlayout);
+        MergedAppBarLayoutBehavior mergedAppBarLayoutBehavior = MergedAppBarLayoutBehavior.from(mergedAppBarLayout);
+        mergedAppBarLayoutBehavior.setToolbarTitle("Title Dummy");
+        mergedAppBarLayoutBehavior.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                behavior.setState(BottomSheetBehaviorGoogleMapsLike.STATE_EXPANDED);
+            }
+        });
     }
 
     @Override
@@ -237,40 +261,23 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
 
     public void getDirections() {
 
-        Gson gson = new GsonBuilder()
-                .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-                .create();
-
-/*        RestAdapter restAdapter = new RestAdapter.Builder()
-                .setEndpoint(base_url)
-                .setLogLevel(RestAdapter.LogLevel.FULL)
-                .build();*/
-
         ApiInterface reqinterface = ApiClient.getClient().create(ApiInterface.class);
 
-        Call<DirectionResults> call = reqinterface.getJson(latLngStartPoint.latitude + "," + latLngStartPoint.longitude, latLngDestination.latitude + "," + latLngDestination.longitude, "driving", getString(R.string.google_directions_key));
+        Call<DirectionResults> call = reqinterface.getJson(latLngStartPoint.latitude + "," + latLngStartPoint.longitude, latLngDestination.latitude + "," + latLngDestination.longitude, "driving", getString(R.string.google_directions_key), "true");
         call.enqueue(new Callback<DirectionResults>() {
             @Override
             public void onResponse(Call<DirectionResults> call, Response<DirectionResults> response) {
                 Log.i("zacharia", "inside on success" + response.message());
-            }
-
-            @Override
-            public void onFailure(Call<DirectionResults> call, Throwable t) {
-                Log.i("zacharia", "inside on failure");
-            }
-        });
-/*        reqinterface.getJson(latLngStartPoint.latitude + "," + latLngStartPoint.longitude, latLngDestination.latitude + "," + latLngDestination.longitude, new Callback<DirectionResults>() {
-
-            @Override
-            public void success(DirectionResults directionResults, Response response) {
-                Log.i("zacharia", "inside on success" + directionResults.getRoutes().size());
                 ArrayList<LatLng> routelist = new ArrayList<LatLng>();
-                if (directionResults.getRoutes().size() > 0) {
-                    ArrayList<LatLng> decodelist;
-                    Routes routeA = directionResults.getRoutes().get(0);
+                List path = new ArrayList<HashMap<String, String>>();
+                List<List<HashMap<String, String>>> routes = new ArrayList<List<HashMap<String, String>>>();
+                List<LatLng> decodelist;
+                for (int k = 0; k < response.body().getRoutes().size(); k++) {
+                    Routes routeA = response.body().getRoutes().get(k);
+
                     Log.i("zacharia", "Legs length : " + routeA.getLegs().size());
                     if (routeA.getLegs().size() > 0) {
+
                         List<Steps> steps = routeA.getLegs().get(0).getSteps();
                         Log.i("zacharia", "Steps size :" + steps.size());
                         Steps step;
@@ -279,37 +286,91 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                         for (int i = 0; i < steps.size(); i++) {
                             step = steps.get(i);
                             location = step.getStart_location();
-                            routelist.add(new LatLng(location.getLat(), location.getLng()));
-                            Log.i("zacharia", "Start Location :" + location.getLat() + ", " + location.getLng());
+                            routelist.add(new LatLng(location.getLatitude(), location.getLongitude()));
+                            Log.i("zacharia", "Start Location :" + location.getLatitude() + ", " + location.getLongitude());
                             polyline = step.getPolyline().getPoints();
-                            decodelist = RouteDecode.decodePoly(polyline);
-                            routelist.addAll(decodelist);
-                            location = step.getEnd_location();
-                            routelist.add(new LatLng(location.getLat(), location.getLng()));
-                            Log.i("zacharia", "End Location :" + location.getLat() + ", " + location.getLng());
+                            decodelist = decodePoly(polyline);
+                            /** Traversing all points */
+                            for (int l = 0; l < decodelist.size(); l++) {
+                                HashMap<String, String> hm = new HashMap<String, String>();
+                                hm.put("lat", Double.toString(((LatLng) decodelist.get(l)).latitude));
+                                hm.put("lng", Double.toString(((LatLng) decodelist.get(l)).longitude));
+                                path.add(hm);
+                            }
                         }
+                        routes.add(path);
                     }
-                }
-                Log.i("zacharia", "routelist size : " + routelist.size());
-                if (routelist.size() > 0) {
-                    PolylineOptions rectLine = new PolylineOptions().width(10).color(
-                            Color.RED);
 
-                    for (int i = 0; i < routelist.size(); i++) {
-                        rectLine.add(routelist.get(i));
+                    ArrayList points = null;
+                    PolylineOptions lineOptions = null;
+                    MarkerOptions markerOptions = new MarkerOptions();
+
+                    for (int i = 0; i < routes.size(); i++) {
+                        points = new ArrayList();
+                        lineOptions = new PolylineOptions();
+
+                        List<HashMap<String, String>> paths = routes.get(i);
+
+                        for (int j = 0; j < path.size(); j++) {
+                            HashMap<String, String> point = paths.get(j);
+
+                            double lat = Double.parseDouble(point.get("lat"));
+                            double lng = Double.parseDouble(point.get("lng"));
+                            LatLng position = new LatLng(lat, lng);
+
+                            points.add(position);
+                        }
+
+                        lineOptions.addAll(points);
+                        lineOptions.width(12);
+                        lineOptions.color(Color.RED);
+                        lineOptions.geodesic(true);
+
                     }
-                    // Adding route on the map
-                    mMap.addPolyline(rectLine);
-                    markerOptions.position(toPosition);
-                    markerOptions.draggable(true);
-                    mMap.addMarker(markerOptions);
+
+                    // Drawing polyline in the Google Map for the i-th route
+                    mMap.addPolyline(lineOptions);
                 }
             }
 
             @Override
-            public void failure(RetrofitError retrofitError) {
-                System.out.println("Failure, retrofitError" + retrofitError);
+            public void onFailure(Call<DirectionResults> call, Throwable t) {
+                Log.i("zacharia", "inside on failure");
             }
-        });*/
+        });
+    }
+
+    private List decodePoly(String encoded) {
+
+        List poly = new ArrayList();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            LatLng p = new LatLng((((double) lat / 1E5)),
+                    (((double) lng / 1E5)));
+            poly.add(p);
+        }
+
+        return poly;
     }
 }

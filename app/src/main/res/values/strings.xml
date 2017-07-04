@@ -7,4 +7,12 @@
     <string name="dummy_content">DUMMY\nCONTENT</string>
     <string name="hint_start">Choose starting point</string>
     <string name="hint_destination">Choose destination</string>
+    <string name="dummy_text">Dummy</string>
+    <string name="BackDropBottomSheetBehavior">com.mihir.navigation.rest.lib.BackdropBottomSheetBehavior</string>
+    <string name="BottomSheetBehaviorGoogleMapsLike">com.mihir.navigation.rest.lib.BottomSheetBehaviorGoogleMapsLike</string>
+    <string name="ScrollAwareFABBehavior">com.mihir.navigation.rest.lib.ScrollAwareFABBehavior</string>
+    <string name="MergedAppBarLayoutBehavior">com.mihir.navigation.rest.lib.MergedAppBarLayoutBehavior</string>
+    <string name="ScrollingAppBarLayoutBehavior">com.mihir.navigation.rest.lib.ScrollingAppBarLayoutBehavior</string>
+    <string name="key_binding_default_toolbar_name">Modal-Toolbar-Title</string>
+    <string name="route_info">ROUTE INFO</string>
 </resources>

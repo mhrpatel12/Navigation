@@ -3,4 +3,12 @@
     <dimen name="margin_place">3dp</dimen>
     <dimen name="padding_places_layout">5dp</dimen>
     <dimen name="margin_fb">10dp</dimen>
+
+    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_vertical_margin">16dp</dimen>
+    <dimen name="fab_margin">16dp</dimen>
+    <dimen name="anchor_point">300dp</dimen>
+    <dimen name="bottom_sheet_peek_height">80dp</dimen>
+    <dimen name="margin_route_info">10dp</dimen>
+    <dimen name="layout_margin_bottom_sheet">17dp</dimen>
 </resources>
