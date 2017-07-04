@@ -19,6 +19,12 @@ public class Steps {
     private Location end_location;
     @SerializedName("polyline")
     private OverviewPolyLine polyline;
+    @SerializedName("html_instructions")
+    private String instruction;
+
+    public String getInstruction() {
+        return instruction;
+    }
 
     public Location getStart_location() {
         return start_location;

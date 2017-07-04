@@ -19,6 +19,7 @@
             android:orientation="horizontal">
 
             <ImageView
+                android:id="@+id/ic_route_info"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/ic_list_white_24dp"/>
@@ -37,19 +38,10 @@
 
     </RelativeLayout>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:text="@string/dummy_text"
-        android:textSize="12sp"
-        android:textColor="@android:color/black"/>
-
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="620dp"
-        android:background="@color/colorAccent"
-        android:layout_marginTop="40dp">
+        android:background="@color/colorAccent">
 
         <TextView
             android:layout_width="wrap_content"

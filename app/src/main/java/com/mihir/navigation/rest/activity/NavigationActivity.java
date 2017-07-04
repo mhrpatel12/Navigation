@@ -32,6 +32,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
@@ -192,6 +193,13 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
             mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation).draggable(true));
             mMap.animateCamera(center);
         }
+
+        mMap.setOnPolylineClickListener(new GoogleMap.OnPolylineClickListener() {
+            @Override
+            public void onPolylineClick(Polyline polyline) {
+                polyline.setColor(Color.BLUE);
+            }
+        });
     }
 
     @Override
@@ -287,7 +295,7 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                             step = steps.get(i);
                             location = step.getStart_location();
                             routelist.add(new LatLng(location.getLatitude(), location.getLongitude()));
-                            Log.i("zacharia", "Start Location :" + location.getLatitude() + ", " + location.getLongitude());
+                            Log.i("Instruction=====>", steps.get(i).getInstruction());
                             polyline = step.getPolyline().getPoints();
                             decodelist = decodePoly(polyline);
                             /** Traversing all points */
@@ -322,10 +330,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                         }
 
                         lineOptions.addAll(points);
-                        lineOptions.width(12);
+                        lineOptions.width(15);
                         lineOptions.color(Color.RED);
-                        lineOptions.geodesic(true);
-
+                        lineOptions.clickable(true);
                     }
 
                     // Drawing polyline in the Google Map for the i-th route
