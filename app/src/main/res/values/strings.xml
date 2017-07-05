@@ -15,4 +15,5 @@
     <string name="ScrollingAppBarLayoutBehavior">com.mihir.navigation.rest.lib.ScrollingAppBarLayoutBehavior</string>
     <string name="key_binding_default_toolbar_name">Modal-Toolbar-Title</string>
     <string name="route_info">ROUTE INFO</string>
+    <string name="dummy_instruction">Go straight and straight !!</string>
 </resources>

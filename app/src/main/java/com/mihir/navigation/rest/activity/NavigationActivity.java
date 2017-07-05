@@ -14,9 +14,13 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.text.Html;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -32,6 +36,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
@@ -40,6 +45,7 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mihir.navigation.R;
+import com.mihir.navigation.rest.adapter.RouteAdapter;
 import com.mihir.navigation.rest.lib.BottomSheetBehaviorGoogleMapsLike;
 import com.mihir.navigation.rest.lib.MergedAppBarLayoutBehavior;
 import com.mihir.navigation.rest.model.DirectionResults;
@@ -73,6 +79,8 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
     private PlaceAutocompleteFragment autocompletePlacesDestination;
 
     private FloatingActionButton fbCurrentLocation;
+    private RecyclerView recyclerViewRouteInstructions;
+    private LinearLayout layoutBottomSheet;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +102,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                 getFragmentManager().findFragmentById(R.id.placeDestination);
         autocompletePlacesStart.setHint(getString(R.string.hint_start));
         autocompletePlacesDestination.setHint(getString(R.string.hint_destination));
+        autocompletePlacesStart.getView().findViewById(R.id.place_autocomplete_search_input).setBackgroundColor(getResources().getColor(R.color.colorPrimaryDark));
+        autocompletePlacesDestination.getView().findViewById(R.id.place_autocomplete_search_input).setBackgroundColor(getResources().getColor(R.color.colorPrimaryDark));
+        layoutBottomSheet = (LinearLayout) findViewById(R.id.layout_bottom_sheet);
 
         autocompletePlacesStart.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
@@ -107,6 +118,7 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                 markerStartPoint = mMap.addMarker(new MarkerOptions().position(latLngStartPoint).title(place.getName() + ""));
                 CameraUpdate center = CameraUpdateFactory.newLatLngZoom(place.getLatLng(), 16);
                 mMap.animateCamera(center);
+                if (verifyPlaces()) getDirections();
             }
 
             @Override
@@ -127,6 +139,7 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                 markerDestination = mMap.addMarker(new MarkerOptions().position(latLngDestination).title(place.getName() + ""));
                 CameraUpdate center = CameraUpdateFactory.newLatLngZoom(place.getLatLng(), 16);
                 mMap.animateCamera(center);
+                if (verifyPlaces()) getDirections();
             }
 
             @Override
@@ -135,20 +148,34 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                 Log.i(TAG, "An error occurred: " + status);
             }
         });
+        autocompletePlacesStart.getView().findViewById(R.id.place_autocomplete_clear_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                markerStartPoint.remove();
+                for (Polyline polyline : listPolyines) {
+                    polyline.remove();
+                }
+            }
+        });
+        autocompletePlacesDestination.getView().findViewById(R.id.place_autocomplete_clear_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                markerDestination.remove();
+                for (Polyline polyline : listPolyines) {
+                    polyline.remove();
+                }
+            }
+        });
 
         fbCurrentLocation = (FloatingActionButton) findViewById(R.id.fbCurrentLocation);
         fbCurrentLocation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (Polyline line : listPolyines) {
-                    line.remove();
-                }
-                getDirections();
-/*                latLngCurrentLocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+                latLngCurrentLocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
                 CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 17);
 
                 mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation).draggable(true));
-                mMap.animateCamera(center);*/
+                mMap.animateCamera(center);
             }
         });
 
@@ -165,6 +192,10 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         }
     }
 
+    private boolean verifyPlaces() {
+        return (latLngStartPoint != null) && (latLngDestination != null);
+    }
+
     private void initializeBottomSheet() {
         CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.layout_directions);
         View bottomSheet = coordinatorLayout.findViewById(R.id.bottom_sheet);
@@ -179,6 +210,8 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                 behavior.setState(BottomSheetBehaviorGoogleMapsLike.STATE_EXPANDED);
             }
         });
+        recyclerViewRouteInstructions = (RecyclerView) findViewById(R.id.recycler_view_route_instructions);
+        recyclerViewRouteInstructions.setLayoutManager(new LinearLayoutManager(this));
     }
 
     @Override
@@ -192,7 +225,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                     Polyline polyline1 = listPolyines.get(i);
                     polyline1.setColor(Color.GRAY);
                     if (polyline.getId().equals(polyline1.getId())) {
-                        listRouteInstructions.get(i);
+                        layoutBottomSheet.setVisibility(View.VISIBLE);
+                        recyclerViewRouteInstructions.setAdapter(new RouteAdapter(listRouteInstructions.get(i), R.layout.list_item_route, getApplicationContext()));
+                        //listRouteInstructions.get(i);
                     }
                 }
                 polyline.setColor(Color.BLUE);
@@ -237,7 +272,7 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         } else if (mLastLocation != null) {
 
             latLngCurrentLocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-            CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 17);
+            CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 16);
 
             mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation).draggable(true));
             mMap.animateCamera(center);
@@ -283,6 +318,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
     private List<ArrayList<String>> listRouteInstructions = new ArrayList<>();
 
     public void getDirections() {
+        for (Polyline line : listPolyines) {
+            line.remove();
+        }
 
         ApiInterface reqinterface = ApiClient.getClient().create(ApiInterface.class);
 
@@ -294,7 +332,7 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                 for (int k = 0; k < response.body().getRoutes().size(); k++) {
                     List path = new ArrayList<>();
                     List<List<HashMap<String, String>>> routes = new ArrayList<>();
-                    List<LatLng> decodedPolyLine;
+                    List<LatLng> decodedPolyLine = null;
                     PolylineOptions lineOptions = new PolylineOptions();
                     Routes route = response.body().getRoutes().get(k);
                     ArrayList<String> listInstructions = new ArrayList<String>();
@@ -339,6 +377,7 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                     // Drawing polyline in the Google Map for the k-th route
                     listPolyines.add(k, mMap.addPolyline(lineOptions));
                     listRouteInstructions.add(listInstructions);
+                    //zoomRoute(mMap, decodedPolyLine);
                 }
             }
 
@@ -347,6 +386,26 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                 Log.i("zacharia", "inside on failure");
             }
         });
+    }
+
+    public void zoomRoute(GoogleMap googleMap, List<LatLng> lstLatLngRoute) {
+
+        if (googleMap == null || lstLatLngRoute == null || lstLatLngRoute.isEmpty()) return;
+
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+        for (LatLng latLngPoint : lstLatLngRoute)
+            boundsBuilder.include(latLngPoint);
+
+
+        int width = getResources().getDisplayMetrics().widthPixels;
+        int height = getResources().getDisplayMetrics().heightPixels;
+        int routePadding = (int) (width * 0.10); // offset from edges of the map 10% of screen
+
+        LatLngBounds latLngBounds = boundsBuilder.build();
+
+        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(latLngBounds, width, height, routePadding);
+
+        googleMap.animateCamera(cu);
     }
 
     private List decodePoly(String encoded) {

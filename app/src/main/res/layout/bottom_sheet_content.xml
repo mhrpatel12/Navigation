@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout_bottom_sheet"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@android:color/white"
+    android:animateLayoutChanges="true"
     android:orientation="vertical"
-    android:background="@android:color/white">
+    android:visibility="gone">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -22,15 +23,15 @@
                 android:id="@+id/ic_route_info"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/ic_list_white_24dp"/>
+                android:background="@drawable/ic_list_white_24dp" />
 
             <TextView
                 android:id="@+id/bottom_sheet_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:layout_marginStart="@dimen/margin_route_info"
                 android:layout_marginLeft="@dimen/margin_route_info"
+                android:layout_marginStart="@dimen/margin_route_info"
                 android:text="@string/route_info"
                 android:textColor="@android:color/white" />
 
@@ -40,15 +41,15 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="620dp"
-        android:background="@color/colorAccent">
+        android:layout_height="wrap_content"
+        android:background="@android:color/white">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="Your remaining content here"
-            android:textColor="@android:color/white" />
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/recycler_view_route_instructions"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:nestedScrollingEnabled="false"
+            android:scrollbars="vertical" />
 
     </FrameLayout>
 </LinearLayout>
