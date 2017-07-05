@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.AppBarLayout;
@@ -13,6 +14,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.text.Html;
 import android.util.Log;
 import android.view.View;
 
@@ -138,6 +140,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         fbCurrentLocation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                for (Polyline line : listPolyines) {
+                    line.remove();
+                }
                 getDirections();
 /*                latLngCurrentLocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
                 CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 17);
@@ -180,6 +185,20 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
+        mMap.setOnPolylineClickListener(new GoogleMap.OnPolylineClickListener() {
+            @Override
+            public void onPolylineClick(Polyline polyline) {
+                for (int i = 0; i < listPolyines.size(); i++) {
+                    Polyline polyline1 = listPolyines.get(i);
+                    polyline1.setColor(Color.GRAY);
+                    if (polyline.getId().equals(polyline1.getId())) {
+                        listRouteInstructions.get(i);
+                    }
+                }
+                polyline.setColor(Color.BLUE);
+            }
+        });
+
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             checkPermissions();
             return;
@@ -193,13 +212,6 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
             mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation).draggable(true));
             mMap.animateCamera(center);
         }
-
-        mMap.setOnPolylineClickListener(new GoogleMap.OnPolylineClickListener() {
-            @Override
-            public void onPolylineClick(Polyline polyline) {
-                polyline.setColor(Color.BLUE);
-            }
-        });
     }
 
     @Override
@@ -267,6 +279,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         }
     }
 
+    private ArrayList<Polyline> listPolyines = new ArrayList<>();
+    private List<ArrayList<String>> listRouteInstructions = new ArrayList<>();
+
     public void getDirections() {
 
         ApiInterface reqinterface = ApiClient.getClient().create(ApiInterface.class);
@@ -275,68 +290,55 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         call.enqueue(new Callback<DirectionResults>() {
             @Override
             public void onResponse(Call<DirectionResults> call, Response<DirectionResults> response) {
-                Log.i("zacharia", "inside on success" + response.message());
-                ArrayList<LatLng> routelist = new ArrayList<LatLng>();
-                List path = new ArrayList<HashMap<String, String>>();
-                List<List<HashMap<String, String>>> routes = new ArrayList<List<HashMap<String, String>>>();
-                List<LatLng> decodelist;
+
                 for (int k = 0; k < response.body().getRoutes().size(); k++) {
-                    Routes routeA = response.body().getRoutes().get(k);
+                    List path = new ArrayList<>();
+                    List<List<HashMap<String, String>>> routes = new ArrayList<>();
+                    List<LatLng> decodedPolyLine;
+                    PolylineOptions lineOptions = new PolylineOptions();
+                    Routes route = response.body().getRoutes().get(k);
+                    ArrayList<String> listInstructions = new ArrayList<String>();
 
-                    Log.i("zacharia", "Legs length : " + routeA.getLegs().size());
-                    if (routeA.getLegs().size() > 0) {
-
-                        List<Steps> steps = routeA.getLegs().get(0).getSteps();
-                        Log.i("zacharia", "Steps size :" + steps.size());
+                    if (route.getLegs().size() > 0) {
+                        List<Steps> steps = route.getLegs().get(0).getSteps();
                         Steps step;
-                        Location location;
                         String polyline;
                         for (int i = 0; i < steps.size(); i++) {
                             step = steps.get(i);
-                            location = step.getStart_location();
-                            routelist.add(new LatLng(location.getLatitude(), location.getLongitude()));
-                            Log.i("Instruction=====>", steps.get(i).getInstruction());
+                            if (Build.VERSION.SDK_INT >= 24) {
+                                listInstructions.add((Html.fromHtml(steps.get(i).getInstruction(), Html.FROM_HTML_MODE_LEGACY) + "").replace("\n", ""));
+                            } else {
+                                listInstructions.add((Html.fromHtml(steps.get(i).getInstruction()) + "").replace("\n", ""));
+                            }
                             polyline = step.getPolyline().getPoints();
-                            decodelist = decodePoly(polyline);
-                            /** Traversing all points */
-                            for (int l = 0; l < decodelist.size(); l++) {
+                            decodedPolyLine = decodePoly(polyline);
+                            for (int l = 0; l < decodedPolyLine.size(); l++) {
                                 HashMap<String, String> hm = new HashMap<String, String>();
-                                hm.put("lat", Double.toString(((LatLng) decodelist.get(l)).latitude));
-                                hm.put("lng", Double.toString(((LatLng) decodelist.get(l)).longitude));
+                                hm.put("lat", Double.toString(((LatLng) decodedPolyLine.get(l)).latitude));
+                                hm.put("lng", Double.toString(((LatLng) decodedPolyLine.get(l)).longitude));
                                 path.add(hm);
                             }
                         }
                         routes.add(path);
                     }
-
-                    ArrayList points = null;
-                    PolylineOptions lineOptions = null;
-                    MarkerOptions markerOptions = new MarkerOptions();
-
                     for (int i = 0; i < routes.size(); i++) {
-                        points = new ArrayList();
-                        lineOptions = new PolylineOptions();
-
+                        ArrayList points = new ArrayList();
                         List<HashMap<String, String>> paths = routes.get(i);
-
                         for (int j = 0; j < path.size(); j++) {
                             HashMap<String, String> point = paths.get(j);
-
                             double lat = Double.parseDouble(point.get("lat"));
                             double lng = Double.parseDouble(point.get("lng"));
                             LatLng position = new LatLng(lat, lng);
-
                             points.add(position);
                         }
-
                         lineOptions.addAll(points);
                         lineOptions.width(15);
-                        lineOptions.color(Color.RED);
+                        lineOptions.color(Color.GRAY);
                         lineOptions.clickable(true);
                     }
-
-                    // Drawing polyline in the Google Map for the i-th route
-                    mMap.addPolyline(lineOptions);
+                    // Drawing polyline in the Google Map for the k-th route
+                    listPolyines.add(k, mMap.addPolyline(lineOptions));
+                    listRouteInstructions.add(listInstructions);
                 }
             }
 

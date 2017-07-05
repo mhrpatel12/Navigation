@@ -12,6 +12,13 @@ public class Routes {
     @SerializedName("legs")
     private List<Legs> legs;
 
+    @SerializedName("overview_polyline")
+    private OverviewPolyLine overViewPolyLine;
+
+    public OverviewPolyLine getOverViewPolyLine() {
+        return overViewPolyLine;
+    }
+
     public List<Legs> getLegs() {
         return legs;
     }

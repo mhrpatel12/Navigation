@@ -13,10 +13,6 @@ import java.util.List;
  */
 
 public class Steps {
-    @SerializedName("start_location")
-    private Location start_location;
-    @SerializedName("end_location")
-    private Location end_location;
     @SerializedName("polyline")
     private OverviewPolyLine polyline;
     @SerializedName("html_instructions")
@@ -24,14 +20,6 @@ public class Steps {
 
     public String getInstruction() {
         return instruction;
-    }
-
-    public Location getStart_location() {
-        return start_location;
-    }
-
-    public Location getEnd_location() {
-        return end_location;
     }
 
     public OverviewPolyLine getPolyline() {
