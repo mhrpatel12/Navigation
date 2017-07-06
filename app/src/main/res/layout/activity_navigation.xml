@@ -32,22 +32,63 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/colorPrimary"
+            android:gravity="center_vertical"
             android:orientation="vertical"
             android:padding="@dimen/padding_places_layout">
 
-            <fragment
-                android:id="@+id/placeStart"
-                android:name="com.google.android.gms.location.places.ui.PlaceAutocompleteFragment"
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="@dimen/margin_place" />
+                android:layout_height="wrap_content">
 
-            <fragment
-                android:id="@+id/placeDestination"
-                android:name="com.google.android.gms.location.places.ui.PlaceAutocompleteFragment"
+                <fragment
+                    android:id="@+id/placeStart"
+                    android:name="com.google.android.gms.location.places.ui.PlaceAutocompleteFragment"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="@dimen/margin_place"
+                    android:layout_toLeftOf="@+id/imgStart" />
+
+                <ImageView
+                    android:id="@+id/imgStart"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="@dimen/margin_right_icon"
+                    android:layout_marginLeft="@dimen/margin_right_icon"
+                    android:layout_marginRight="@dimen/margin_right_icon"
+                    android:layout_marginStart="@dimen/margin_right_icon"
+                    android:src="@drawable/ic_my_location_white_24dp" />
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="@dimen/margin_place" />
+                android:layout_height="wrap_content">
+
+                <fragment
+                    android:id="@+id/placeDestination"
+                    android:name="com.google.android.gms.location.places.ui.PlaceAutocompleteFragment"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_margin="@dimen/margin_place"
+                    android:layout_toLeftOf="@+id/imgDestination" />
+
+                <ImageView
+                    android:id="@+id/imgDestination"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="@dimen/margin_right_icon"
+                    android:layout_marginLeft="@dimen/margin_right_icon"
+                    android:layout_marginRight="@dimen/margin_right_icon"
+                    android:layout_marginStart="@dimen/margin_right_icon"
+                    android:src="@drawable/ic_place_white_24dp" />
+            </RelativeLayout>
+
         </LinearLayout>
 
     </FrameLayout>
@@ -57,11 +98,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"
-        app:layout_anchor="@id/layout"
-        app:layout_anchorGravity="bottom|right|end"
         android:layout_marginBottom="@dimen/margin_fb"
         android:layout_marginEnd="@dimen/margin_fb"
         android:layout_marginRight="@dimen/margin_fb"
+        app:layout_anchor="@id/layout"
+        app:layout_anchorGravity="bottom|right|end"
         android:src="@drawable/ic_my_location_white_24dp" />
 
     <android.support.v4.widget.NestedScrollView

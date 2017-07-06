@@ -1,10 +1,15 @@
 package com.mihir.navigation.rest.activity;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Build;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.AppBarLayout;
@@ -12,8 +17,8 @@ import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Html;
@@ -35,15 +40,13 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.mihir.navigation.R;
 import com.mihir.navigation.rest.adapter.RouteAdapter;
 import com.mihir.navigation.rest.lib.BottomSheetBehaviorGoogleMapsLike;
@@ -58,7 +61,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import okhttp3.Route;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -81,6 +83,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
     private FloatingActionButton fbCurrentLocation;
     private RecyclerView recyclerViewRouteInstructions;
     private LinearLayout layoutBottomSheet;
+    private Bitmap bitmapCurrentPosition;
+    private Bitmap bitmapDestination;
+    private static final int MY_PERMISSIONS_REQUEST_EXTERNAL_STORAGE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,6 +94,8 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
 
         mContext = this;
         checkPermissions();
+        bitmapCurrentPosition = getBitmapFromVectorDrawable(mContext, R.drawable.ic_current_location_marker_24dp);
+        bitmapDestination = getBitmapFromVectorDrawable(mContext, R.drawable.ic_beenhere_black_24dp);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -104,6 +111,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         autocompletePlacesDestination.setHint(getString(R.string.hint_destination));
         autocompletePlacesStart.getView().findViewById(R.id.place_autocomplete_search_input).setBackgroundColor(getResources().getColor(R.color.colorPrimaryDark));
         autocompletePlacesDestination.getView().findViewById(R.id.place_autocomplete_search_input).setBackgroundColor(getResources().getColor(R.color.colorPrimaryDark));
+        ((EditText) autocompletePlacesStart.getView().findViewById(R.id.place_autocomplete_search_input)).setTextColor(Color.WHITE);
+        ((EditText) autocompletePlacesDestination.getView().findViewById(R.id.place_autocomplete_search_input)).setTextColor(Color.WHITE);
+
         layoutBottomSheet = (LinearLayout) findViewById(R.id.layout_bottom_sheet);
 
         autocompletePlacesStart.setOnPlaceSelectedListener(new PlaceSelectionListener() {
@@ -136,7 +146,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                 if (markerDestination != null && markerDestination.isVisible()) {
                     markerDestination.remove();
                 }
-                markerDestination = mMap.addMarker(new MarkerOptions().position(latLngDestination).title(place.getName() + ""));
+                markerDestination = mMap.addMarker(new MarkerOptions().position(latLngDestination)
+                        .icon(BitmapDescriptorFactory.fromBitmap(bitmapDestination))
+                        .title(place.getName() + ""));
                 CameraUpdate center = CameraUpdateFactory.newLatLngZoom(place.getLatLng(), 16);
                 mMap.animateCamera(center);
                 if (verifyPlaces()) getDirections();
@@ -151,7 +163,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         autocompletePlacesStart.getView().findViewById(R.id.place_autocomplete_clear_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                autocompletePlacesStart.setText("");
                 markerStartPoint.remove();
+                layoutBottomSheet.setVisibility(View.GONE);
                 for (Polyline polyline : listPolyines) {
                     polyline.remove();
                 }
@@ -160,7 +174,9 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         autocompletePlacesDestination.getView().findViewById(R.id.place_autocomplete_clear_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                autocompletePlacesDestination.setText("");
                 markerDestination.remove();
+                layoutBottomSheet.setVisibility(View.GONE);
                 for (Polyline polyline : listPolyines) {
                     polyline.remove();
                 }
@@ -171,11 +187,15 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         fbCurrentLocation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                latLngCurrentLocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-                CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 17);
+                if (mLastLocation != null) {
+                    latLngCurrentLocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+                    CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 17);
 
-                mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation).draggable(true));
-                mMap.animateCamera(center);
+                    mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation)
+                            .icon(BitmapDescriptorFactory.fromBitmap(bitmapCurrentPosition))
+                            .draggable(true));
+                    mMap.animateCamera(center);
+                }
             }
         });
 
@@ -227,7 +247,6 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                     if (polyline.getId().equals(polyline1.getId())) {
                         layoutBottomSheet.setVisibility(View.VISIBLE);
                         recyclerViewRouteInstructions.setAdapter(new RouteAdapter(listRouteInstructions.get(i), R.layout.list_item_route, getApplicationContext()));
-                        //listRouteInstructions.get(i);
                     }
                 }
                 polyline.setColor(Color.BLUE);
@@ -244,7 +263,10 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         if (mLastLocation != null) {
             latLngCurrentLocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
             CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 17);
-            mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation).draggable(true));
+            mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation)
+                    .icon(BitmapDescriptorFactory.fromBitmap(bitmapCurrentPosition))
+                    .draggable(true));
+
             mMap.animateCamera(center);
         }
     }
@@ -264,18 +286,24 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(
                 mGoogleApiClient);
 
-        if (latLngCurrentLocation != null) {
-            CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 16);
+        if (listPolyines.size() <= 0) {
+            if (latLngCurrentLocation != null) {
+                CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 16);
 
-            mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation).draggable(true));
-            mMap.animateCamera(center);
-        } else if (mLastLocation != null) {
+                mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation)
+                        .icon(BitmapDescriptorFactory.fromBitmap(bitmapCurrentPosition))
+                        .draggable(true));
+                mMap.animateCamera(center);
+            } else if (mLastLocation != null) {
 
-            latLngCurrentLocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-            CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 16);
+                latLngCurrentLocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+                CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 16);
 
-            mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation).draggable(true));
-            mMap.animateCamera(center);
+                mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation)
+                        .icon(BitmapDescriptorFactory.fromBitmap(bitmapCurrentPosition))
+                        .draggable(true));
+                mMap.animateCamera(center);
+            }
         }
     }
 
@@ -306,11 +334,42 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
                 // No explanation needed, we can request the permission.
                 ActivityCompat.requestPermissions(NavigationActivity.this,
                         new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION},
-                        2);
+                        MY_PERMISSIONS_REQUEST_EXTERNAL_STORAGE);
                 // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
                 // app-defined int constant. The callback method gets the
                 // result of the request.
             }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSIONS_REQUEST_EXTERNAL_STORAGE: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
+                    mLastLocation = LocationServices.FusedLocationApi.getLastLocation(
+                            mGoogleApiClient);
+                    if (mLastLocation != null) {
+                        latLngCurrentLocation = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+                        CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLngCurrentLocation, 17);
+                        mMap.addMarker(new MarkerOptions().position(latLngCurrentLocation)
+                                .icon(BitmapDescriptorFactory.fromBitmap(bitmapCurrentPosition))
+                                .draggable(true));
+
+                        mMap.animateCamera(center);
+                    }
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
         }
     }
 
@@ -383,7 +442,6 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
 
             @Override
             public void onFailure(Call<DirectionResults> call, Throwable t) {
-                Log.i("zacharia", "inside on failure");
             }
         });
     }
@@ -440,5 +498,20 @@ public class NavigationActivity extends FragmentActivity implements OnMapReadyCa
         }
 
         return poly;
+    }
+
+    public static Bitmap getBitmapFromVectorDrawable(Context context, int drawableId) {
+        Drawable drawable = ContextCompat.getDrawable(context, drawableId);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            drawable = (DrawableCompat.wrap(drawable)).mutate();
+        }
+
+        Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(),
+                drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.draw(canvas);
+
+        return bitmap;
     }
 }
